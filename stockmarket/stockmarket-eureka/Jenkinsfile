@@ -1,17 +1,15 @@
-//×î»ù±¾µÄÁ¬Ğø½»¸¶Á÷³Ì½«ÖÁÉÙ¾ßÓĞÈı¸ö½×¶Î£¬ÕâĞ©½×¶ÎÓ¦ÔÚÒÔÏÂÄÚÈİÖĞ¶¨ÒåJenkinsfile£º¹¹½¨£¬²âÊÔºÍ²¿Êğ¡£
-
 pipeline {
   agent none  
-                           //AgentÍ¨³£ÊÇÒ»¸ö»úÆ÷»òÈİÆ÷£¬ËüÁ¬½Óµ½JenkinsÖ÷»ú£¬²¢ÔÚÖ÷¿ØÆ÷Ö¸µ¼Ê±Ö´ĞĞÈÎÎñ¡£
-                           //±íÊ¾JenkinsÓ¦¸ÃÎªPipelineµÄÕâÒ»²¿·Ö·ÖÅäÒ»¸öÖ´ĞĞÕßºÍ¹¤×÷Çø¡£
- //¶¨Òå»·¾³±äÁ¿                         
+  tools{
+      maven 'maven'
+  }                        
   environment {
-	GIT_PROJECT_ADDR="https://github.com/yolanda-stack/stockmarket.git" //ÏîÄ¿µÄgitµØÖ·
-	JENKINS_WORKSPACE="/var/jenkins_home/workspace"    //jenkins´æ·ÅÎÄ¼şµÄµØÖ·
-	PROJECT_NAME="stockmarket-eureka"  			        // ÏîÄ¿Ãû
-	JAR_NAME="stockmarket-eureka.jar"                     // ÏîÄ¿Éú³ÉµÄjarµÄÃû×Ö
-	IMAGE_NAME="stockmarket-eureka"                    // ¾µÏñÃûÒ»°ãºÍÏîÄ¿ÃûÏàÍ¬
-	IMAGE_ADDR="yolanda/${IMAGE_NAME}"    // ¾µÏñµÄÎ»ÖÃ
+	GIT_PROJECT_ADDR="https://github.com/yolanda-stack/stockmarket.git" //é¡¹ç›®çš„gitåœ°å€
+	JENKINS_WORKSPACE="/var/jenkins_home/workspace"    //jenkinså­˜æ”¾æ–‡ä»¶çš„åœ°å€
+	PROJECT_NAME="stockmarket-eureka"  			        // é¡¹ç›®å
+	JAR_NAME="stockmarket-eureka.jar"                     // é¡¹ç›®ç”Ÿæˆçš„jarçš„åå­—
+	IMAGE_NAME="stockmarket-eureka"                    // é•œåƒåä¸€èˆ¬å’Œé¡¹ç›®åç›¸åŒ
+	IMAGE_ADDR="yolanda/${IMAGE_NAME}"    // é•œåƒçš„ä½ç½®
 	VERSION_ID="1.0.0"
 	CREDENTIAL_ID="Dockerhub_weilei"
   }
@@ -26,30 +24,30 @@ pipeline {
         stage('Build') {
             steps{
                 echo 'This is a Build step'
-                // ÔÚÓĞJenkinsfileÍ¬Ò»¸öÄ¿Â¼ÏÂ£¨ÏîÄ¿µÄ¸ùÄ¿Â¼ÏÂ£©
+                // åœ¨æœ‰JenkinsfileåŒä¸€ä¸ªç›®å½•ä¸‹ï¼ˆé¡¹ç›®çš„æ ¹ç›®å½•ä¸‹ï¼‰
                 sh 'mvn install -pl stock-eureka -am -Dmaven.test.skip=true'
             }
         }
-        // ´´½¨Ä¿Â¼(Èç¹û²»´æÔÚ)£¬²¢°ÑjarÎÄ¼şÉÏ´«µ½¸ÃÄ¿Â¼ÏÂ
+        // åˆ›å»ºç›®å½•(å¦‚æœä¸å­˜åœ¨)ï¼Œå¹¶æŠŠjaræ–‡ä»¶ä¸Šä¼ åˆ°è¯¥ç›®å½•ä¸‹
         stage('ssh') {
             steps{	       	    
 	       script {	    
                 echo 'push jar to target server'
-                //É¾³ıËùÓĞÏà¹ØÈİÆ÷
+                //åˆ é™¤æ‰€æœ‰ç›¸å…³å®¹å™¨
 		def OLD_CONTAINER_ID=sh(returnStdout:true,script:"sudo docker ps -aq --filter name=${IMAGE_NAME}")
 		echo "OLD_CONTAINER_ID:${OLD_CONTAINER_ID}"			
 		if(OLD_CONTAINER_ID){	
 		    echo 'delete old container'	
                     sh 'sudo docker rm -f $(sudo docker ps -aq --filter name="${IMAGE_NAME}")'
 		}
-		//É¾³ıËùÓĞÏà¹Ø¾µÏñ			
+		//åˆ é™¤æ‰€æœ‰ç›¸å…³é•œåƒ			
 		def OLD_IMAGE_ID=sh(returnStdout:true,script:"sudo docker image ls -q ${IMAGE_NAME}")
 		echo "OLD_IMAGE_ID:${OLD_IMAGE_ID}"			
 		if(OLD_IMAGE_ID){
 		    echo 'delete old image'	
                     sh 'sudo docker rmi -f $(sudo docker image ls -q ${IMAGE_NAME})'
 		}	
-		//´´½¨¾µÏñ
+		//åˆ›å»ºé•œåƒ
 		sh 'sudo docker build -t ${IMAGE_NAME}:${VERSION_ID} ./${PROJECT_NAME}'
 		def NEW_IMAGE_ID=sh(returnStdout:true,script:"sudo docker image ls -q ${IMAGE_NAME}")
 		echo "NEW_IMAGE_ID:${NEW_IMAGE_ID}"
@@ -62,10 +60,10 @@ pipeline {
             }
         }
         stage('run') {
-            // ÔÚÓ¦ÓÃ·şÎñÆ÷½Úµã test
+            // åœ¨åº”ç”¨æœåŠ¡å™¨èŠ‚ç‚¹ test
             agent any
             options {
-                // ²»ÈÃËüÇĞ»»µ½½ÚµãÉÏ×Ô¶¯´Ó²Ö¿âÀ­È¡ÏîÄ¿
+                // ä¸è®©å®ƒåˆ‡æ¢åˆ°èŠ‚ç‚¹ä¸Šè‡ªåŠ¨ä»ä»“åº“æ‹‰å–é¡¹ç›®
                 skipDefaultCheckout()
             }
             steps {  
@@ -73,18 +71,18 @@ pipeline {
                 echo 'pull image and docker run'
                 withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
 		   //sh 'sudo docker pull ${IMAGE_ADDR}:${VERSION_ID}'
-		   //É¾³ıËùÓĞÏà¹ØÈİÆ÷
+		   //åˆ é™¤æ‰€æœ‰ç›¸å…³å®¹å™¨
 		    def OLD_CONTAINER_ID=sh(returnStdout:true,script:"sudo docker ps -aq --filter name=${IMAGE_NAME}")
 		    echo "OLD_CONTAINER_ID:${OLD_CONTAINER_ID}"			
 		    if(OLD_CONTAINER_ID){	
 		        echo 'delete old container'	
                         sh 'sudo docker rm -f $(docker ps -aq --filter name="${IMAGE_NAME}")'
 		    }
-		   //É¾³ıËùÓĞÏà¹ØÈİÆ÷
+		   //åˆ é™¤æ‰€æœ‰ç›¸å…³å®¹å™¨
                    //sh 'docker rm -f $(sudo docker ps -aq --filter name="${IMAGE_NAME}")'
-                   //É¾³ıËùÓĞÏà¹Ø¾µÏñ
+                   //åˆ é™¤æ‰€æœ‰ç›¸å…³é•œåƒ
                    //sh 'docker rmi -f $(docker image ls -q ${IMAGE_NAME})'
-                   //Æô¶¯¾µÏñÉú³ÉÈİÆ÷	
+                   //å¯åŠ¨é•œåƒç”Ÿæˆå®¹å™¨	
 		   sh 'sudo docker run --name "${IMAGE_NAME}" --restart=always -p 8761:8761 -d ${IMAGE_NAME}:${VERSION_ID}'
 					
                 }
