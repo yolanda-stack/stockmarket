@@ -1,0 +1,67 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.stockmarket</groupId>
+  <artifactId>stockmarket</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  
+  <properties>
+        <spring-cloud.version>Greenwich.SR2</spring-cloud.version>
+        <spring-boot.version>2.1.6.RELEASE</spring-boot.version>
+        <gson.version>2.6</gson.version>
+    </properties>
+
+    <!-- spring-cloud所有项目依赖包 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- 必须引入gson 2.6版的替换2.2版的，不然会报错不兼容 -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>${gson.version}</version>
+        </dependency>
+    </dependencies>
+
+<!--     <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <encoding>utf-8</encoding>
+                    <source>1.8</source>
+                    <target>1.8</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build> -->
+    <modules>
+    	<module>stockmarket-eureka</module>
+    	<module>stockmarket-service-company</module>
+    	<module>stockmatket-service-import</module>
+    	<module>stockmarket-service-exchanges</module>
+    	<module>stockmarket-service-price</module>
+    	<module>stockmarket-service-import</module>
+    	<module>stockmarket-service-user</module>
+    	<module>stockmarket-zuul</module>
+    </modules>
+</project>

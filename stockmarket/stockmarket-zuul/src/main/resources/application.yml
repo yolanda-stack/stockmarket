@@ -1,0 +1,132 @@
+spring:
+  profiles:
+    active: prod
+  application:
+    name: StockMarket-Zuul
+
+server:
+  port: 8860
+
+zuul:
+  # 所谓敏感，也即是在转发时要删除的设置
+  sensitive-headers: Access-Control-Allow-Origin,Cookie,Set-Cookie # 会过滤客户端附带的headers. It's to fix error: multiple Access-Control-Allow-Origin
+  ignored-headers: Access-Control-Allow-Origin,Cookie,Set-Cookie # 会过滤服务之间通信附带的headers, e.g.: 如果客户端在发请求是带了Cookie，那么Cookie依然会传递给下游服务。但是如果下游服务再转发就会被过滤。
+#  prefix: /api/smc
+#  strip-prefix: false
+
+  routes:
+   zuul-service-company:               
+     path: /company-service-zuul/**
+     service-id: service-company    
+     sensitive-headers:      
+     custom-sensitive-headers: true
+    
+   zuul-service-exchanges:               
+     path: /exchanges-service-zuul/**
+     service-id: service-exchanges    
+     sensitive-headers:      
+     custom-sensitive-headers: true
+     
+   zuul-service-import:               
+       path: /import-service-zuul/**
+       service-id: service-import    
+       sensitive-headers:      
+       custom-sensitive-headers: true
+       
+   zuul-service-price:               
+       path: /price-service-zuul/**
+       service-id: service-price    
+       sensitive-headers:      
+       custom-sensitive-headers: true
+       
+#   zuul-service-price:               
+#       path: /price-service-zuul/**
+#       service-id: service-price    
+#       sensitive-headers:      
+#       custom-sensitive-headers: true
+       
+   zuul-service-user:               
+       path: /user-service-zuul/**
+       service-id: service-user    
+       sensitive-headers:      
+       custom-sensitive-headers: true
+  
+#    service-company: /smccompany/**
+#    service-exchanges: /smcexchange/**
+#    service-import: /smcimport/**
+#    service-price: /smcprice/**
+#    service-user: /smcuser/**
+
+# 设置为true表示开启熔断hystrix，设置false表示关闭熔断机制
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 100000
+ribbon:
+  ReadTimeout: 100000
+  ConnectTimeout: 100000
+
+
+management:
+  endpoints:
+    enabled-by-default: false
+  endpoint:
+    info:
+      enabled: true
+    health:
+      enabled: true
+      show-details: always
+  
+---
+spring:
+  profiles: dev
+      
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true   #开启显示IP地址
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}   #eureka页面显示IP地址：端口号
+    #    prefer-ip-address: false
+    #    hostname: localhost
+    #    instance-id: 127.0.0.1:${server.port}
+    lease-expiration-duration-in-seconds: 30
+    lease-renewal-interval-in-seconds: 10
+    
+# a日志设置配置信息
+# logging:
+#   config: classpath:logback-spring.xml
+ 
+---
+spring:
+  profiles: prod
+  
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    healthcheck:
+      enabled: true
+  instance:
+    prefer-ip-address: true   #开启显示IP地址
+    instance-id: ${spring.cloud.client.ip-address}:${server.port}   #eureka页面显示IP地址：端口号
+    #    prefer-ip-address: false
+    #    hostname: 106.54.194.33
+    #    instance-id: 106.54.194.33:${server.port}
+    lease-expiration-duration-in-seconds: 30
+    lease-renewal-interval-in-seconds: 10
+    
+# a日志设置配置信息
+# logging:
+#   config: classpath:logback-prod.xm
+

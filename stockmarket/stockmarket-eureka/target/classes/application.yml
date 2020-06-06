@@ -1,0 +1,13 @@
+#本机端口
+server:
+  port: 8761
+
+eureka:
+  client:
+#是否向注册中心注册自己
+    register-with-eureka: false
+#是否从注册中心查询服务
+    fetch-registry: false
+#注册中心地址
+    service-url:
+      defaultZone: http://localhost:8761/eureka/

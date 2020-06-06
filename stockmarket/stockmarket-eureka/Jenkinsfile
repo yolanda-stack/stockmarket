@@ -1,0 +1,95 @@
+//最基本的连续交付流程将至少具有三个阶段，这些阶段应在以下内容中定义Jenkinsfile：构建，测试和部署。
+
+pipeline {
+  agent none  
+                           //Agent通常是一个机器或容器，它连接到Jenkins主机，并在主控器指导时执行任务。
+                           //表示Jenkins应该为Pipeline的这一部分分配一个执行者和工作区。
+ //定义环境变量                         
+  environment {
+	GIT_PROJECT_ADDR="https://github.com/yolanda-stack/stockmarket.git" //项目的git地址
+	JENKINS_WORKSPACE="/var/jenkins_home/workspace"    //jenkins存放文件的地址
+	PROJECT_NAME="stockmarket-eureka"  			        // 项目名
+	JAR_NAME="stockmarket-eureka.jar"                     // 项目生成的jar的名字
+	IMAGE_NAME="stockmarket-eureka"                    // 镜像名一般和项目名相同
+	IMAGE_ADDR="yolanda/${IMAGE_NAME}"    // 镜像的位置
+	VERSION_ID="1.0.0"
+	CREDENTIAL_ID="Dockerhub_weilei"
+  }
+  stages {
+        stage('pullCode'){
+            steps{
+                echo 'This is a pullCode step'
+                //git branch: "${BRANCH}", credentialsId: '1001', url: "${GIT_PROJECT_ADDR}"
+                checkout scm
+            }
+        }
+        stage('Build') {
+            steps{
+                echo 'This is a Build step'
+                // 在有Jenkinsfile同一个目录下（项目的根目录下）
+                sh 'mvn install -pl stock-eureka -am -Dmaven.test.skip=true'
+            }
+        }
+        // 创建目录(如果不存在)，并把jar文件上传到该目录下
+        stage('ssh') {
+            steps{	       	    
+	       script {	    
+                echo 'push jar to target server'
+                //删除所有相关容器
+		def OLD_CONTAINER_ID=sh(returnStdout:true,script:"sudo docker ps -aq --filter name=${IMAGE_NAME}")
+		echo "OLD_CONTAINER_ID:${OLD_CONTAINER_ID}"			
+		if(OLD_CONTAINER_ID){	
+		    echo 'delete old container'	
+                    sh 'sudo docker rm -f $(sudo docker ps -aq --filter name="${IMAGE_NAME}")'
+		}
+		//删除所有相关镜像			
+		def OLD_IMAGE_ID=sh(returnStdout:true,script:"sudo docker image ls -q ${IMAGE_NAME}")
+		echo "OLD_IMAGE_ID:${OLD_IMAGE_ID}"			
+		if(OLD_IMAGE_ID){
+		    echo 'delete old image'	
+                    sh 'sudo docker rmi -f $(sudo docker image ls -q ${IMAGE_NAME})'
+		}	
+		//创建镜像
+		sh 'sudo docker build -t ${IMAGE_NAME}:${VERSION_ID} ./${PROJECT_NAME}'
+		def NEW_IMAGE_ID=sh(returnStdout:true,script:"sudo docker image ls -q ${IMAGE_NAME}")
+		echo "NEW_IMAGE_ID:${NEW_IMAGE_ID}"
+		//withCredentials([usernamePassword(credentialsId:"${CREDENTIAL_ID}",usernameVariable:'USERNAME',passwordVariable:'PASSWORD')]){
+                 //   sh 'sudo docker login -u $USERNAME -p $PASSWORD'
+                 //   sh 'sudo docker tag ${NEW_IMAGE_ID} ${IMAGE_ADDR}:${VERSION_ID}'
+                 //   sh 'sudo docker push ${IMAGE_ADDR}:${VERSION_ID}'
+		//}
+	       }       
+            }
+        }
+        stage('run') {
+            // 在应用服务器节点 test
+            agent any
+            options {
+                // 不让它切换到节点上自动从仓库拉取项目
+                skipDefaultCheckout()
+            }
+            steps {  
+	       script {	    
+                echo 'pull image and docker run'
+                withEnv(['JENKINS_NODE_COOKIE=dontKillMe']) {
+		   //sh 'sudo docker pull ${IMAGE_ADDR}:${VERSION_ID}'
+		   //删除所有相关容器
+		    def OLD_CONTAINER_ID=sh(returnStdout:true,script:"sudo docker ps -aq --filter name=${IMAGE_NAME}")
+		    echo "OLD_CONTAINER_ID:${OLD_CONTAINER_ID}"			
+		    if(OLD_CONTAINER_ID){	
+		        echo 'delete old container'	
+                        sh 'sudo docker rm -f $(docker ps -aq --filter name="${IMAGE_NAME}")'
+		    }
+		   //删除所有相关容器
+                   //sh 'docker rm -f $(sudo docker ps -aq --filter name="${IMAGE_NAME}")'
+                   //删除所有相关镜像
+                   //sh 'docker rmi -f $(docker image ls -q ${IMAGE_NAME})'
+                   //启动镜像生成容器	
+		   sh 'sudo docker run --name "${IMAGE_NAME}" --restart=always -p 8761:8761 -d ${IMAGE_NAME}:${VERSION_ID}'
+					
+                }
+		}
+            }
+        }
+    }
+}

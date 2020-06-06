@@ -1,0 +1,66 @@
+//最基本的连续交付流程将至少具有三个阶段，这些阶段应在以下内容中定义Jenkinsfile：构建，测试和部署。
+
+pipeline {
+  agent none  
+                           //Agent通常是一个机器或容器，它连接到Jenkins主机，并在主控器指导时执行任务。
+                           //表示Jenkins应该为Pipeline的这一部分分配一个执行者和工作区。
+ //定义环境变量                         
+  environment {
+    DOCKERHUBNAME = "yolanda"
+  }
+  stages {                               //stage是Pipeline的一部分，用于定义整个Pipeline的概念上不同的子集，例如：“构建”，“测试”和“部署”，许多插件用于可视化或呈现Jenkins Pipeline状态/进度。
+    stage('maven Build') {
+      agent {
+	    //定义执行环境
+        docker {                           // Pipeline设计用于容易地使用Docker图像和容器在里面运行。
+		                                   // 这允许Pipeline定义所需的环境和工具，而无需手动配置各种系统工具和对代理的依赖。
+										   //这种方法允许您几乎可以使用可以打包在Docker容器中的任何工具 。
+          image 'maven:3-alpine'
+          args '-v /root/.m2:/root/.m2'
+        }
+      }
+      steps {                               //step：单一任务从根本上讲，指的是Jenkins 在Pipeline或项目中做了什么。
+        // sh 'mvn -B -DskipTests clean package'
+        sh 'mvn package -Dmaven.test.skip=true'
+        sh 'mvn clean package'
+      }
+    }
+
+    stage('docker build & push & run') {
+      agent any
+      steps {
+        script {
+          def REMOVE_FLAG_C = sh(returnStdout: true, script: "docker container ls -q --filter name=.*Stockmarket-zuul.*") != ""
+          echo "REMOVE_FLAG_C: ${REMOVE_FLAG_C}"
+          if(REMOVE_FLAG_C){
+            sh 'docker container rm -f $(docker container ls -q --filter name=.*Stockmarket-zuul.*)'
+          }
+          def REMOVE_FLAG = sh(returnStdout: true, script: "docker image ls -q *${DOCKERHUBNAME}/zuul*") != ""
+          echo "REMOVE_FLAG: ${REMOVE_FLAG}"
+          if(REMOVE_FLAG){
+            sh 'docker image rm -f $(docker image ls -q *${DOCKERHUBNAME}/zuul*)'
+          }
+        }
+
+        withCredentials([usernamePassword(credentialsId: 'YolandaID', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+          // sh 'docker login -u $USERNAME -p $PASSWORD'
+          sh 'docker image build -t ${DOCKERHUBNAME}/zuul .'
+          // sh 'docker push ${DOCKERHUBNAME}/zuul'
+          // sh 'docker run -d -p 8888:8888 --network smc-net --name smczuul ${DOCKERHUBNAME}/zuul'
+          sh 'docker run -d -p 8888:8888 --memory=600M --network smc-net --name Stockmarket-zuul ${DOCKERHUBNAME}/zuul'
+        }
+      }
+    }
+	
+	//Workspace：
+    //Noede文件系统上的一次性目录， 可以由Pipeline或项目完成工作。在Build或 Pipeline运行完成后，工作区通常会保留原样，除非在Jenkins Master上已经设置了特定的Workspace清理策略。
+
+    stage('clean workspace') {     
+      agent any
+      steps {
+        // clean workspace after job finished
+        cleanWs()
+      }
+    }
+  }
+}
